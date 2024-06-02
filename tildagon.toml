@@ -1,0 +1,13 @@
+[app]
+name = "GraymeBadge"
+category = "Badge"
+wifi_preference = false
+
+[entry]
+class = "GraymeBadge"
+
+[metadata]
+author = "AgentAntelope"
+license = "Unlicense"
+description = "A simple greyscale 'Hello my name is' sticker style Tildagon name badge, based on jake-walker's"
+version = "0.0.1"
