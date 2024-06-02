@@ -7,6 +7,7 @@ from system.eventbus import eventbus
 from perf_timer import PerfTimer
 from system.patterndisplay.events import *
 from tildagonos import tildagonos
+from power import BatteryLevel
 
 
 class GraymeBadge(app.App):
@@ -18,6 +19,9 @@ class GraymeBadge(app.App):
     orange = (255,50,0)
     red = (255,0,0)
 
+    rgb_min = 0
+    rgb_max = 255
+
     # colors used for the 'hello my name is' part
     header_fg_color = (0, 0, 0)
 
@@ -26,6 +30,12 @@ class GraymeBadge(app.App):
         self.button_states = Buttons(self)
         self.state = "name"
         self.states = {
+            "battery": {
+                "heading": "battery",
+                "subheading": "percentage is",
+                "text": "Unknown",
+                "colour": self.white,
+            },
             "name": {
                 "heading": "Hello",
                 "subheading": "my name is",
@@ -47,6 +57,8 @@ class GraymeBadge(app.App):
                 "colour": self.red,
             },
         }
+        self.update_battery()
+        self.name_state()
         self.update_state()
 
     async def run(self, render_update):
@@ -84,21 +96,25 @@ class GraymeBadge(app.App):
             eventbus.emit(PatternEnable())
             self.minimise()
             self.button_states.clear()
-        # Inigo Montoya Escalation
         elif self.button_states.get(BUTTON_TYPES["DOWN"]):
-            if self.state == "name":
-                self.state = "context"
-                eventbus.emit(PatternDisable())
+            # Convenient battery meter
+            if self.state == "battery":
+                self.name_state()
+            # Inigo Montoya Escalation
+            elif self.state == "name":
+                self.context_state()
             elif self.state == "context":
-                self.state = "threat"
+                self.threat_state()
             self.update_state()
-        # Inigo Montoya De-escalation
         elif self.button_states.get(BUTTON_TYPES["UP"]):
+            # Inigo Montoya De-escalation
             if self.state == "threat":
-                self.state = "context"
+                self.context_state()
             elif self.state == "context":
-                self.state = "name"
-                eventbus.emit(PatternEnable())
+                self.name_state()
+            # Convenient battery meter
+            elif self.state == "name":
+                self.battery_state()
             self.update_state()
 
     def draw(self, ctx):
@@ -143,5 +159,36 @@ class GraymeBadge(app.App):
                 tildagonos.leds[i+1] = self.black
 
         self.button_states.clear()
+
+    def battery_state(self):
+        self.state = "battery"
+        self.update_battery()
+
+    def name_state(self):
+        self.state = "name"
+        eventbus.emit(PatternEnable())
+
+    def context_state(self):
+        self.state = "context"
+        eventbus.emit(PatternDisable())
+
+    def threat_state(self):
+        self.state = "threat"
+        eventbus.emit(PatternDisable())
+
+    def update_battery(self):
+        eventbus.emit(PatternDisable())
+        self.states["battery"]["text"] = f"{BatteryLevel():.2f}%"
+        # Battery level is a float 0..100
+        # We set LED colour to reflect how low your battery is
+        self.states["battery"]["led_colours"] = (
+            self.clamp(255 - int((BatteryLevel() / 100) * 255)),
+            self.clamp(int((BatteryLevel() / 100) * 255)),
+            self.rgb_min,
+        )
+
+    # Used for ensuring valid RGB values for LEDs
+    def clamp(self, n, lower = rgb_min, upper = rgb_max):
+	    return sorted([lower, n, upper])[1]
 
 __app_export__ = GraymeBadge
