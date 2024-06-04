@@ -178,14 +178,18 @@ class GraymeBadge(app.App):
 
     def update_battery(self):
         eventbus.emit(PatternDisable())
-        self.states["battery"]["text"] = f"{BatteryLevel():.2f}%"
+        self.states["battery"]["text"] = f"{self.battery_level():.2f}%"
         # Battery level is a float 0..100
         # We set LED colour to reflect how low your battery is
         self.states["battery"]["led_colours"] = (
-            self.clamp(255 - int((BatteryLevel() / 100) * 255)),
-            self.clamp(int((BatteryLevel() / 100) * 255)),
+            self.clamp(255 - int((self.battery_level() / 100) * 255)),
+            self.clamp(int((self.battery_level() / 100) * 255)),
             self.rgb_min,
         )
+
+    def battery_level(self):
+        return self.clamp(BatteryLevel(), 0, 100)
+
 
     # Used for ensuring valid RGB values for LEDs
     def clamp(self, n, lower = rgb_min, upper = rgb_max):
